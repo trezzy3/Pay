@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acesso | TREZZY PAY</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 400: '#8b5cf6', 500: '#7c3aid', 600: '#6d28d9' }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Fontes e Ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- SDK do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: 'Outfit', sans-serif; background-color: #0b0b0f; color: #f5f5f7; }
+    .spinner { border: 3px solid rgba(139, 92, 246, 0.3); border-top-color: #8b5cf6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex items-center justify-center relative overflow-hidden">
+
+  <!-- Efeitos de Fundo SaaS -->
+  <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/5 blur-[120px] rounded-full"></div>
+  </div>
+
+  <!-- TELA DE CARREGAMENTO (Com timeout de segurança infalível) -->
+  <div id="loading-screen" class="relative z-10 flex flex-col items-center justify-center space-y-4">
+    <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 to-purple-800 p-0.5 shadow-lg shadow-purple-600/20 mb-2">
+      <div class="w-full h-full bg-[#14141b] rounded-full flex items-center justify-center text-purple-400 text-3xl">
+        <i class="fa-solid fa-cube"></i>
+      </div>
+    </div>
+    <h1 class="font-black text-2xl text-white tracking-tight">TREZZY <span class="text-purple-500">PAY</span></h1>
+    <div class="spinner my-4"></div>
+    <p class="text-sm text-zinc-400 font-medium animate-pulse">Carregando painel...</p>
+  </div>
+
+  <!-- CONTAINER DO FORMULÁRIO (Oculto inicialmente por segurança) -->
+  <div id="login-form" class="relative z-10 w-full max-w-md px-6 hidden opacity-0 transition-opacity duration-700">
+    <div class="bg-[#14141b]/90 backdrop-blur-xl border border-[#292933] rounded-3xl p-8 shadow-2xl shadow-black">
+      
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-purple-600 to-purple-800 p-0.5 shadow-lg mb-4">
+          <div class="w-full h-full bg-[#0b0b0f] rounded-full flex items-center justify-center text-purple-400 text-2xl">
+            <i class="fa-solid fa-cube"></i>
+          </div>
+        </div>
+        <h2 id="form-title" class="text-2xl font-black text-white">Acessar Conta</h2>
+        <p id="form-subtitle" class="text-xs text-zinc-400 mt-1">Insira seus dados para gerenciar seus packs STL</p>
+      </div>
+
+      <!-- FORMULÁRIO DE AUTENTICAÇÃO -->
+      <form id="auth-form" onsubmit="processarAutenticacao(event)" class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2">E-mail</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-zinc-500">
+              <i class="fa-solid fa-envelope"></i>
+            </span>
+            <input id="email-input" type="email" placeholder="seu@email.com" required class="w-full bg-[#0b0b0f] border border-[#292933] rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-xs font-bold text-zinc-300 uppercase tracking-wider">Senha</label>
+          </div>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-zinc-500">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input id="password-input" type="password" placeholder="••••••••" required class="w-full bg-[#0b0b0f] border border-[#292933] rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition" />
+          </div>
+        </div>
+
+        <!-- MENSAGEM DE FEEDBACK -->
+        <p id="auth-message" class="hidden text-xs font-bold text-center mt-2 p-2.5 rounded-lg border"></p>
+
+        <!-- BOTÃO DE AÇÃO -->
+        <button type="submit" id="submit-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-black text-sm rounded-xl shadow-lg shadow-purple-600/20 transition active:scale-95 mt-2 flex items-center justify-center gap-2">
+          <span id="btn-text">Entrar no Painel</span>
+        </button>
+      </form>
+
+      <!-- BOTÃO DE ALTERNÂNCIA (LOGIN <-> CRIAR CONTA) -->
+      <div class="text-center mt-6 pt-4 border-t border-[#292933]">
+        <p id="toggle-text" class="text-xs text-zinc-400">
+          Ainda não tem conta? 
+          <button type="button" onclick="alternarModo()" class="text-purple-400 hover:text-purple-300 font-bold ml-1 underline underline-offset-2">Criar conta agora</button>
+        </p>
+      </div>
+      
+      <p class="text-[11px] text-center text-zinc-500 mt-6">
+        Ambiente seguro TREZZY PAY <i class="fa-solid fa-shield-halved ml-1"></i>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Configuração do Supabase (Insira as suas chaves reais se desejar autenticação em nuvem)
+    const SUPABASE_URL = 'https://euiusibylgnrsglaqfph.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1aXVzaWJ5bGducnNnbGFxZnBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NDUxMTEsImV4cCI6MjEwODUyMTExMX0.exG4k4Zwt7VGBuLTZitagYL97aybaGMJxExg3Oetx64';
+    
+    let supabaseClient = null;
+    try {
+      if (SUPABASE_URL && SUPABASE_URL !== 'https://euiusibylgnrsglaqfph.supabase.co') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(e) { console.log("Modo de teste local ativado."); }
+
+    let modoCriarConta = false;
+
+    function alternarModo() {
+      modoCriarConta = !modoCriarConta;
+      const title = document.getElementById('form-title');
+      const subtitle = document.getElementById('form-subtitle');
+      const btnText = document.getElementById('btn-text');
+      const toggleText = document.getElementById('toggle-text');
+      const msgBox = document.getElementById('auth-message');
+
+      if (msgBox) msgBox.classList.add('hidden');
+
+      if (modoCriarConta) {
+        title.textContent = "Criar Nova Conta";
+        subtitle.textContent = "Registe-se para aceder aos seus packs STL";
+        btnText.textContent = "Registar Conta";
+        toggleText.innerHTML = `Já tem uma conta? <button type="button" onclick="alternarModo()" class="text-purple-400 hover:text-purple-300 font-bold ml-1 underline underline-offset-2">Fazer Login</button>`;
+      } else {
+        title.textContent = "Acessar Conta";
+        subtitle.textContent = "Insira seus dados para gerenciar seus packs STL";
+        btnText.textContent = "Entrar no Painel";
+        toggleText.innerHTML = `Ainda não tem conta? <button type="button" onclick="alternarModo()" class="text-purple-400 hover:text-purple-300 font-bold ml-1 underline underline-offset-2">Criar conta agora</button>`;
+      }
+    }
+
+    // REMOÇÃO AUTOMÁTICA DO LOADING (Garante que nunca fica travado)
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        const loginForm = document.getElementById('login-form');
+        
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (loginForm) {
+          loginForm.classList.remove('hidden');
+          loginForm.style.opacity = '1';
+        }
+      }, 1200);
+    });
+
+    async function processarAutenticacao(event) {
+      event.preventDefault();
+
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value;
+      const msgBox = document.getElementById('auth-message');
+      const submitBtn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+
+      // Se o Supabase não estiver configurado, redireciona diretamente para testes
+      if (!supabaseClient) {
+        window.location.href = "area-cliente.html";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnText.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> A processar...`;
+
+      if (modoCriarConta) {
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+
+        if (error) {
+          msgBox.textContent = "Erro ao criar conta: " + error.message;
+          msgBox.className = "text-xs font-bold text-center mt-2 p-2.5 rounded-lg border bg-red-950/40 border-red-900/50 text-red-400";
+          msgBox.classList.remove('hidden');
+          submitBtn.disabled = false;
+          btnText.textContent = "Registar Conta";
+        } else {
+          msgBox.textContent = "Conta criada com sucesso! Redirecionando...";
+          msgBox.className = "text-xs font-bold text-center mt-2 p-2.5 rounded-lg border bg-emerald-950/40 border-emerald-900/50 text-emerald-400";
+          msgBox.classList.remove('hidden');
+          setTimeout(() => { window.location.href = "area-cliente.html"; }, 1000);
+        }
+      } else {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          msgBox.textContent = "Acesso negado: E-mail ou senha incorretos.";
+          msgBox.className = "text-xs font-bold text-center mt-2 p-2.5 rounded-lg border bg-red-950/40 border-red-900/50 text-red-400";
+          msgBox.classList.remove('hidden');
+          submitBtn.disabled = false;
+          btnText.textContent = "Entrar no Painel";
+        } else {
+          msgBox.classList.add('hidden');
+          window.location.href = "area-cliente.html";
+        }
+      }
+    }
+  </script>
+</body>
+</html>

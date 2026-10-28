@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Área do Cliente | Trezzy 3D</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fontes e Ícones -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- SDK do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ⚙️ SE QUISER USAR O SUPABASE DEPOIS, COLOQUE SUAS CHAVES AQUI. SE NÃO, DEIXE ASSIM PARA TESTAR.
+    const SUPABASE_URL = 'SUA_PROJECT_URL';
+    const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
+    
+    let supabaseClient = null;
+    try {
+      if (SUPABASE_URL !== 'SUA_PROJECT_URL') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(e) { console.log("Supabase não configurado, modo livre ativado."); }
+
+    // Função de Terminar Sessão (Logout)
+    async function terminarSessao() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      window.location.href = "index.html";
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0b0f17; }
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+    :root { --ma-primary: #f59e0b; --ma-bg: #0b0f17; }
+  </style>
+</head>
+<body class="text-slate-200 antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- TOPO / HEADER DO PAINEL -->
+  <header class="border-b border-white/10 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <div>
+          <span class="font-heading font-black text-white text-lg tracking-tight">TREZZY <span class="text-amber-500">3D</span></span>
+          <span class="text-[10px] text-zinc-400 block -mt-1" id="user-email-display">Painel do Aluno / Cliente</span>
+        </div>
+      </div>
+      <button onclick="terminarSessao()" class="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-red-400 bg-zinc-900 px-3.5 py-2 rounded-xl border border-white/5 transition">
+        <i class="fa-solid fa-right-from-bracket"></i> Sair
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL (EXIBIDO IMEDIATAMENTE) -->
+  <main id="active-content" class="overflow-x-clip print:p-0 px-4 pb-6 sm:px-6 flex-1">
+    <div class="mx-auto w-full max-w-6xl space-y-8 pb-8">
+      
+      <!-- HERO SECTION -->
+      <section class="ma-hero relative -mx-6 flex items-end justify-start overflow-hidden bg-cover bg-center px-8 pb-10 pt-24 md:px-10 md:pb-14 md:pt-28 min-h-[55vh] md:min-h-[65vh] -mt-14" style="background-image: linear-gradient(135deg, var(--ma-primary) 0%, #27272a 100%);">
+        <div class="absolute inset-0 transition-opacity duration-700 ease-out opacity-100">
+          <div class="absolute inset-0 hidden bg-cover bg-center md:block" style="background-image: url('assets/pack_cover_org.png');"></div>
+          <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: url('assets/pack_cover_org.png');"></div>
+        </div>
+        <div class="absolute inset-0 bg-black" style="opacity: 0.5;"></div>
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2" style="background: linear-gradient(to top, var(--ma-bg) 0%, transparent 100%);"></div>
+        <div class="relative z-10 max-w-2xl space-y-2">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+            <i class="fa-solid fa-circle-check"></i> Plano Ativo & Liberado
+          </span>
+          <h1 class="text-3xl font-bold text-white drop-shadow-lg md:text-5xl font-heading">+ de 1.000 arquivos STL - Plano Básico & Master</h1>
+        </div>
+      </section>
+
+      <!-- LISTA DE MÓDULOS E OPÇÕES COMPLETA -->
+      <section class="space-y-6">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-[var(--ma-primary)]">Conteúdo do seu Acesso</p>
+          <h2 class="mt-1 text-2xl font-bold text-white sm:text-3xl font-heading">Todos os Módulos e Opções Disponíveis</h2>
+        </div>
+
+        <!-- MÓDULO 1: ARQUIVOS STL -->
+        <details class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15" open>
+          <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--ma-primary)]/15 text-[var(--ma-primary)]">
+              <i class="fa-solid fa-folder-open text-lg"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-lg font-semibold text-white">Módulo 1: Acervo de Arquivos STL</span>
+              <span class="block text-sm text-zinc-400">4 opções e links de download direto</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
+          </summary>
+          <div class="border-t border-white/10 p-3 sm:p-4 space-y-2">
+            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 01 - Organização & Oficina</span><span class="block text-xs text-zinc-400">Opção 1 · Acesso via Google Drive</span></span>
+            </a>
+            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 02 - Brinquedos Articulados</span><span class="block text-xs text-zinc-400">Opção 2 · Acesso via Google Drive</span></span>
+            </a>
+            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 03 - Luminárias & Decoração</span><span class="block text-xs text-zinc-400">Opção 3 · Acesso via Google Drive</span></span>
+            </a>
+            <a href="#" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-emerald-400"><i class="fa-solid fa-book-open"></i></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">📢 Manual de Configuração de Fatiamento (Cura / Bambu)</span><span class="block text-xs text-zinc-400">Opção 4 · Guia em PDF</span></span>
+            </a>
+          </div>
+        </details>
+
+        <!-- MÓDULO 2: SUPORTE E COMUNIDADE -->
+        <details class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15">
+          <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <i class="fa-brands fa-whatsapp text-xl"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-lg font-semibold text-white">Módulo 2: Comunidade & Suporte VIP</span>
+              <span class="block text-sm text-zinc-400">Canal exclusivo</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
+          </summary>
+          <div class="border-t border-white/10 p-3 sm:p-4 space-y-2">
+            <a href="https://wa.me/5511990035253" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400"><i class="fa-brands fa-whatsapp"></i></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Entrar no Grupo VIP do WhatsApp para Makers</span><span class="block text-xs text-zinc-400">Suporte direto com a Trezzy 3D</span></span>
+            </a>
+          </div>
+        </details>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer class="border-t border-white/10 py-6 text-center text-xs text-zinc-500">
+    © 2026 Trezzy 3D • Todos os direitos reservados.
+  </footer>
+
+</body>
+</html>
