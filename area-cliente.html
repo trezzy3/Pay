@@ -1,156 +1,442 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0f17">
   <title>Área do Cliente | Trezzy 3D</title>
-  
-  <!-- Tailwind CSS -->
+
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Fontes e Ícones -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-
-  <!-- SDK do Supabase -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // ⚙️ SE QUISER USAR O SUPABASE DEPOIS, COLOQUE SUAS CHAVES AQUI. SE NÃO, DEIXE ASSIM PARA TESTAR.
-    const SUPABASE_URL = 'SUA_PROJECT_URL';
-    const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
-    
-    let supabaseClient = null;
-    try {
-      if (SUPABASE_URL !== 'SUA_PROJECT_URL') {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      }
-    } catch(e) { console.log("Supabase não configurado, modo livre ativado."); }
-
-    // Função de Terminar Sessão (Logout)
-    async function terminarSessao() {
-      if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-      }
-      window.location.href = "index.html";
-    }
-  </script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #0b0f17; }
-    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
-    :root { --ma-primary: #f59e0b; --ma-bg: #0b0f17; }
+    body {
+      font-family: "Inter", sans-serif;
+      background-color: #0b0f17;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Outfit", sans-serif;
+    }
+
+    :root {
+      --ma-primary: #f59e0b;
+      --ma-bg: #0b0f17;
+    }
+
+    /*
+      O conteúdo fica oculto até que a sessão seja validada.
+      Isso evita a exibição normal da página antes da verificação.
+      A segurança dos arquivos também depende das regras do servidor.
+    */
+    body.auth-pending {
+      visibility: hidden;
+    }
+
+    body.auth-ready {
+      visibility: visible;
+    }
+
+    .download-disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   </style>
 </head>
-<body class="text-slate-200 antialiased min-h-screen flex flex-col justify-between">
 
-  <!-- TOPO / HEADER DO PAINEL -->
-  <header class="border-b border-white/10 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
-          <i class="fa-solid fa-cube"></i>
+<body class="auth-pending text-slate-200 antialiased min-h-screen flex flex-col justify-between">
+
+  <div id="auth-loading" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b0f17]">
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin text-3xl text-amber-400"></i>
+      <p class="mt-4 text-sm text-zinc-400">Verificando seu acesso...</p>
+    </div>
+  </div>
+
+  <div id="auth-error" class="hidden fixed inset-0 z-[110] flex items-center justify-center bg-[#0b0f17] p-6">
+    <div class="max-w-md text-center">
+      <i class="fa-solid fa-shield-halved text-4xl text-amber-400"></i>
+      <h1 class="mt-5 text-2xl font-bold text-white">Acesso não disponível</h1>
+      <p id="auth-error-message" class="mt-3 text-sm text-zinc-400">
+        Não foi possível verificar sua sessão.
+      </p>
+      <a
+        href="index.html"
+        class="inline-flex mt-6 items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-bold text-black hover:bg-amber-400"
+      >
+        <i class="fa-solid fa-arrow-left"></i>
+        Voltar ao login
+      </a>
+    </div>
+  </div>
+
+  <div id="member-content" class="hidden">
+
+    <!-- CABEÇALHO -->
+    <header class="border-b border-white/10 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-30">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
+            <i class="fa-solid fa-cube"></i>
+          </div>
+
+          <div>
+            <span class="font-black text-white text-lg tracking-tight">
+              TREZZY <span class="text-amber-500">3D</span>
+            </span>
+            <span id="user-email-display" class="text-[10px] text-zinc-400 block -mt-1">
+              Área do cliente
+            </span>
+          </div>
         </div>
-        <div>
-          <span class="font-heading font-black text-white text-lg tracking-tight">TREZZY <span class="text-amber-500">3D</span></span>
-          <span class="text-[10px] text-zinc-400 block -mt-1" id="user-email-display">Painel do Aluno / Cliente</span>
-        </div>
+
+        <button
+          id="logout-button"
+          type="button"
+          class="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-red-400 bg-zinc-900 px-3.5 py-2 rounded-xl border border-white/5 transition"
+        >
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Sair
+        </button>
       </div>
-      <button onclick="terminarSessao()" class="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-red-400 bg-zinc-900 px-3.5 py-2 rounded-xl border border-white/5 transition">
-        <i class="fa-solid fa-right-from-bracket"></i> Sair
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <!-- CONTEÚDO PRINCIPAL (EXIBIDO IMEDIATAMENTE) -->
-  <main id="active-content" class="overflow-x-clip print:p-0 px-4 pb-6 sm:px-6 flex-1">
-    <div class="mx-auto w-full max-w-6xl space-y-8 pb-8">
-      
-      <!-- HERO SECTION -->
-      <section class="ma-hero relative -mx-6 flex items-end justify-start overflow-hidden bg-cover bg-center px-8 pb-10 pt-24 md:px-10 md:pb-14 md:pt-28 min-h-[55vh] md:min-h-[65vh] -mt-14" style="background-image: linear-gradient(135deg, var(--ma-primary) 0%, #27272a 100%);">
-        <div class="absolute inset-0 transition-opacity duration-700 ease-out opacity-100">
-          <div class="absolute inset-0 hidden bg-cover bg-center md:block" style="background-image: url('assets/pack_cover_org.png');"></div>
-          <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: url('assets/pack_cover_org.png');"></div>
-        </div>
-        <div class="absolute inset-0 bg-black" style="opacity: 0.5;"></div>
-        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2" style="background: linear-gradient(to top, var(--ma-bg) 0%, transparent 100%);"></div>
-        <div class="relative z-10 max-w-2xl space-y-2">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-            <i class="fa-solid fa-circle-check"></i> Plano Ativo & Liberado
-          </span>
-          <h1 class="text-3xl font-bold text-white drop-shadow-lg md:text-5xl font-heading">+ de 1.000 arquivos STL - Plano Básico & Master</h1>
-        </div>
-      </section>
+    <!-- CONTEÚDO -->
+    <main class="overflow-x-clip print:p-0 px-4 pb-6 sm:px-6 flex-1">
+      <div class="mx-auto w-full max-w-6xl space-y-8 pb-8">
 
-      <!-- LISTA DE MÓDULOS E OPÇÕES COMPLETA -->
-      <section class="space-y-6">
-        <div>
-          <p class="text-xs font-bold uppercase tracking-wider text-[var(--ma-primary)]">Conteúdo do seu Acesso</p>
-          <h2 class="mt-1 text-2xl font-bold text-white sm:text-3xl font-heading">Todos os Módulos e Opções Disponíveis</h2>
-        </div>
-
-        <!-- MÓDULO 1: ARQUIVOS STL -->
-        <details class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15" open>
-          <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--ma-primary)]/15 text-[var(--ma-primary)]">
-              <i class="fa-solid fa-folder-open text-lg"></i>
-            </span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-lg font-semibold text-white">Módulo 1: Acervo de Arquivos STL</span>
-              <span class="block text-sm text-zinc-400">4 opções e links de download direto</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
-          </summary>
-          <div class="border-t border-white/10 p-3 sm:p-4 space-y-2">
-            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 01 - Organização & Oficina</span><span class="block text-xs text-zinc-400">Opção 1 · Acesso via Google Drive</span></span>
-            </a>
-            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 02 - Brinquedos Articulados</span><span class="block text-xs text-zinc-400">Opção 2 · Acesso via Google Drive</span></span>
-            </a>
-            <a href="https://drive.google.com" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400"><i class="fa-solid fa-download"></i></span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Baixar Pack 03 - Luminárias & Decoração</span><span class="block text-xs text-zinc-400">Opção 3 · Acesso via Google Drive</span></span>
-            </a>
-            <a href="#" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-emerald-400"><i class="fa-solid fa-book-open"></i></span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">📢 Manual de Configuração de Fatiamento (Cura / Bambu)</span><span class="block text-xs text-zinc-400">Opção 4 · Guia em PDF</span></span>
-            </a>
+        <!-- DESTAQUE -->
+        <section
+          class="relative -mx-6 flex items-end justify-start overflow-hidden bg-cover bg-center px-8 pb-10 pt-24 md:px-10 md:pb-14 md:pt-28 min-h-[45vh] md:min-h-[55vh]"
+          style="background-image: linear-gradient(135deg, #b45309 0%, #27272a 100%);"
+        >
+          <div class="absolute inset-0">
+            <div
+              class="absolute inset-0 bg-cover bg-center"
+              style="background-image: url('assets/pack_cover_org.png');"
+            ></div>
           </div>
-        </details>
 
-        <!-- MÓDULO 2: SUPORTE E COMUNIDADE -->
-        <details class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15">
-          <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-              <i class="fa-brands fa-whatsapp text-xl"></i>
+          <div class="absolute inset-0 bg-black/60"></div>
+
+          <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
+            style="background: linear-gradient(to top, var(--ma-bg) 0%, transparent 100%);"
+          ></div>
+
+          <div class="relative z-10 max-w-2xl space-y-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
+              <i class="fa-solid fa-user-check"></i>
+              Sessão autenticada
             </span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-lg font-semibold text-white">Módulo 2: Comunidade & Suporte VIP</span>
-              <span class="block text-sm text-zinc-400">Canal exclusivo</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
-          </summary>
-          <div class="border-t border-white/10 p-3 sm:p-4 space-y-2">
-            <a href="https://wa.me/5511990035253" target="_blank" class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3 transition hover:bg-white/[0.085]">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400"><i class="fa-brands fa-whatsapp"></i></span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-white">Entrar no Grupo VIP do WhatsApp para Makers</span><span class="block text-xs text-zinc-400">Suporte direto com a Trezzy 3D</span></span>
-            </a>
+
+            <h1 class="text-3xl font-bold text-white drop-shadow-lg md:text-5xl">
+              Sua área de membros Trezzy
+            </h1>
+
+            <p class="text-sm md:text-base text-zinc-200">
+              Consulte seus conteúdos e acesse os materiais que estiverem disponíveis para sua conta.
+            </p>
           </div>
-        </details>
+        </section>
 
-      </section>
+        <!-- ESTADO DO ACESSO -->
+        <section class="rounded-2xl border border-white/10 bg-zinc-900/65 p-5">
+          <div class="flex items-start gap-4">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <i class="fa-solid fa-circle-info text-lg"></i>
+            </div>
 
-    </div>
-  </main>
+            <div>
+              <h2 class="font-bold text-white">Bem-vindo à área de membros</h2>
+              <p class="mt-1 text-sm leading-6 text-zinc-400">
+                Seu login foi validado. A liberação dos packs por compra ainda precisa ser integrada.
+                Entrar nesta página não significa, por si só, que uma compra foi confirmada.
+              </p>
+            </div>
+          </div>
+        </section>
 
-  <!-- RODAPÉ -->
-  <footer class="border-t border-white/10 py-6 text-center text-xs text-zinc-500">
-    © 2026 Trezzy 3D • Todos os direitos reservados.
-  </footer>
+        <!-- MÓDULOS -->
+        <section class="space-y-6">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-amber-400">
+              Biblioteca Trezzy
+            </p>
+            <h2 class="mt-1 text-2xl font-bold text-white sm:text-3xl">
+              Conteúdos e materiais
+            </h2>
+            <p class="mt-2 text-sm text-zinc-400">
+              Os botões de download serão ativados após configurar os arquivos e as permissões de acesso.
+            </p>
+          </div>
+
+          <!-- MÓDULO STL -->
+          <details
+            class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15"
+            open
+          >
+            <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <i class="fa-solid fa-folder-open text-lg"></i>
+              </span>
+
+              <span class="min-w-0 flex-1">
+                <span class="block text-lg font-semibold text-white">
+                  Biblioteca de arquivos STL
+                </span>
+                <span class="block text-sm text-zinc-400">
+                  Packs e materiais digitais
+                </span>
+              </span>
+
+              <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
+            </summary>
+
+            <div class="border-t border-white/10 p-3 sm:p-4 space-y-3">
+
+              <div class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400">
+                  <i class="fa-solid fa-box"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-white">
+                    Pack 01 — Organização e Oficina
+                  </span>
+                  <span class="block text-xs text-zinc-400">
+                    Download ainda não configurado
+                  </span>
+                </span>
+                <span class="text-xs text-zinc-500">Em preparação</span>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400">
+                  <i class="fa-solid fa-puzzle-piece"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-white">
+                    Pack 02 — Brinquedos e Articulados
+                  </span>
+                  <span class="block text-xs text-zinc-400">
+                    Download ainda não configurado
+                  </span>
+                </span>
+                <span class="text-xs text-zinc-500">Em preparação</span>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-amber-400">
+                  <i class="fa-solid fa-lightbulb"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-white">
+                    Pack 03 — Luminárias e Decoração
+                  </span>
+                  <span class="block text-xs text-zinc-400">
+                    Download ainda não configurado
+                  </span>
+                </span>
+                <span class="text-xs text-zinc-500">Em preparação</span>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-xl bg-white/[0.045] px-3.5 py-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-emerald-400">
+                  <i class="fa-solid fa-book-open"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-white">
+                    Manual de fatiamento — Cura e Bambu Studio
+                  </span>
+                  <span class="block text-xs text-zinc-400">
+                    PDF ainda não configurado
+                  </span>
+                </span>
+                <span class="text-xs text-zinc-500">Em preparação</span>
+              </div>
+
+            </div>
+          </details>
+
+          <!-- MÓDULO SUPORTE -->
+          <details class="group overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/65 shadow-xl shadow-black/15">
+            <summary class="flex cursor-pointer list-none items-center gap-4 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <i class="fa-brands fa-whatsapp text-xl"></i>
+              </span>
+
+              <span class="min-w-0 flex-1">
+                <span class="block text-lg font-semibold text-white">
+                  Suporte e comunidade
+                </span>
+                <span class="block text-sm text-zinc-400">
+                  Canais de atendimento
+                </span>
+              </span>
+
+              <i class="fa-solid fa-chevron-down text-zinc-400 transition group-open:rotate-180"></i>
+            </summary>
+
+            <div class="border-t border-white/10 p-3 sm:p-4 space-y-2">
+              <p class="text-sm text-zinc-400 leading-6">
+                O canal de suporte pode ser disponibilizado aqui depois de confirmar o número e as condições de atendimento.
+              </p>
+
+              <!--
+                Adicione o link oficial do suporte somente quando
+                confirmar o número e o destino corretos.
+              -->
+            </div>
+          </details>
+
+        </section>
+      </div>
+    </main>
+
+    <footer class="border-t border-white/10 py-6 text-center text-xs text-zinc-500">
+      © 2026 Trezzy 3D • Todos os direitos reservados.
+    </footer>
+
+  </div>
+
+  <script>
+    "use strict";
+
+    const SUPABASE_URL =
+      "https://euiusibylgnrsglaqfph.supabase.co";
+
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWIiLCJyZWYiOiJldWl1c2lieWxnbnJzZ2xhcWZwaCIsImlhdCI6MTc5Mjk0NTExMSwiZXhwIjoyMTA4NTIxMTExfQ.exG4k4Zwt7VGBuLTZitagYL97aybaGMJxExg3Oetx64";
+
+    let supabaseClient = null;
+    let saindo = false;
+
+    const loading = document.getElementById("auth-loading");
+    const errorPanel = document.getElementById("auth-error");
+    const errorMessage = document.getElementById("auth-error-message");
+    const memberContent = document.getElementById("member-content");
+    const emailDisplay = document.getElementById("user-email-display");
+    const logoutButton = document.getElementById("logout-button");
+
+    function mostrarErro(mensagem) {
+      loading.classList.add("hidden");
+      memberContent.classList.add("hidden");
+      errorMessage.textContent = mensagem;
+      errorPanel.classList.remove("hidden");
+      document.body.classList.remove("auth-pending");
+      document.body.classList.add("auth-ready");
+    }
+
+    function mostrarAreaDoCliente(user) {
+      emailDisplay.textContent = user.email || "Área do cliente";
+
+      loading.classList.add("hidden");
+      errorPanel.classList.add("hidden");
+      memberContent.classList.remove("hidden");
+
+      document.body.classList.remove("auth-pending");
+      document.body.classList.add("auth-ready");
+    }
+
+    async function terminarSessao() {
+      if (saindo) return;
+
+      saindo = true;
+      logoutButton.disabled = true;
+      logoutButton.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> Saindo...';
+
+      try {
+        if (!supabaseClient) {
+          window.location.replace("index.html");
+          return;
+        }
+
+        const { error } = await supabaseClient.auth.signOut();
+
+        if (error) {
+          throw error;
+        }
+
+        window.location.replace("index.html");
+      } catch (error) {
+        console.error("Erro ao encerrar sessão:", error);
+
+        saindo = false;
+        logoutButton.disabled = false;
+        logoutButton.innerHTML =
+          '<i class="fa-solid fa-right-from-bracket"></i> Sair';
+
+        alert("Não foi possível encerrar a sessão. Tente novamente.");
+      }
+    }
+
+    async function verificarSessao() {
+      try {
+        if (!window.supabase?.createClient) {
+          throw new Error("O SDK do Supabase não foi carregado.");
+        }
+
+        if (
+          !SUPABASE_URL ||
+          !SUPABASE_ANON_KEY ||
+          SUPABASE_ANON_KEY.includes("COLE_A_CHAVE")
+        ) {
+          throw new Error("Configuração do Supabase incompleta.");
+        }
+
+        supabaseClient = window.supabase.createClient(
+          SUPABASE_URL,
+          SUPABASE_ANON_KEY,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true
+            }
+          }
+        );
+
+        const { data, error } =
+          await supabaseClient.auth.getSession();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data.session) {
+          window.location.replace("index.html");
+          return;
+        }
+
+        mostrarAreaDoCliente(data.session.user);
+
+        supabaseClient.auth.onAuthStateChange(
+          (event, session) => {
+            if (event === "SIGNED_OUT" || !session) {
+              window.location.replace("index.html");
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Erro ao verificar a sessão:", error);
+
+        mostrarErro(
+          "Não foi possível confirmar sua sessão. Volte ao login e tente novamente."
+        );
+      }
+    }
+
+    logoutButton.addEventListener("click", terminarSessao);
+
+    document.addEventListener("DOMContentLoaded", verificarSessao);
+  </script>
 
 </body>
 </html>
